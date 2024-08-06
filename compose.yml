@@ -1,0 +1,49 @@
+name: 'apache-kafka-sample'
+
+services:
+  zookeeper:
+    container_name: confluentinc-cp-zookeeper-container
+    hostname: confluentinc-cp-zookeeper
+    image: confluentinc/cp-zookeeper:dev
+    build:
+      context: .
+      dockerfile: ./infra/docker/zookeeper/Dockerfile
+      cache_from:
+        - confluentinc/cp-zookeeper:cache
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SYNC_LIMIT: 2
+    ports:
+      - "2181:2181"
+    networks:
+      - apache-kafka-sample
+
+  kafka:
+    container_name: confluentinc-cp-server-container
+    hostname: confluentinc-cp-server
+    image: confluentinc/cp-server:dev
+    build:
+      context: .
+      dockerfile: ./infra/docker/kafka/Dockerfile
+      cache_from:
+        - confluentinc/cp-server:cache
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+#      CONFLUENT_SUPPORT_CUSTOMER_ID: c0
+#      KAFKA_CONFLUENT_LICENSE: 'ABC123XYZ737BVT'
+      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
+    depends_on:
+      - zookeeper
+    networks:
+      - apache-kafka-sample
+
+networks:
+  apache-kafka-sample:
+    driver: bridge
