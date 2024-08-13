@@ -16,31 +16,108 @@ services:
       ZOOKEEPER_SYNC_LIMIT: 2
     ports:
       - "2181:2181"
+    volumes:
+      - ./infra/docker/zookeeper/data:/var/lib/zookeeper/data
+      - ./infra/docker/zookeeper/log:/var/lib/zookeeper/log
     networks:
       - apache-kafka-sample
 
-  kafka:
-    container_name: confluentinc-cp-server-container
-    hostname: confluentinc-cp-server
-    image: confluentinc/cp-server:dev
+  kafka01:
+    container_name: confluentinc-cp-server01-container
+    hostname: confluentinc-cp-server01
+    image: confluentinc/cp-server01:dev
     build:
       context: .
-      dockerfile: ./infra/docker/kafka/Dockerfile
+      dockerfile: ./infra/docker/kafka01/Dockerfile
       cache_from:
-        - confluentinc/cp-server:cache
+        - confluentinc/cp-server01:cache
     ports:
       - "9092:9092"
+    restart: always
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka01:9092
+    depends_on:
+      - zookeeper
+    volumes:
+      - ./infra/docker/kafka01/data:/var/lib/kafka/data
+    networks:
+      - apache-kafka-sample
+
+  kafka02:
+    container_name: confluentinc-cp-server02-container
+    hostname: confluentinc-cp-server02
+    image: confluentinc/cp-server02:dev
+    build:
+      context: .
+      dockerfile: ./infra/docker/kafka02/Dockerfile
+      cache_from:
+        - confluentinc/cp-server02:cache
+    ports:
+      - "9093:9093"
+    restart: always
     environment:
       KAFKA_BROKER_ID: 2
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-#      CONFLUENT_SUPPORT_CUSTOMER_ID: c0
-#      KAFKA_CONFLUENT_LICENSE: 'ABC123XYZ737BVT'
-      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka02:9093
     depends_on:
       - zookeeper
+    volumes:
+      - ./infra/docker/kafka02/data:/var/lib/kafka/data
+    networks:
+      - apache-kafka-sample
+
+  kafka03:
+    container_name: confluentinc-cp-server03-container
+    hostname: confluentinc-cp-server03
+    image: confluentinc/cp-server03:dev
+    build:
+      context: .
+      dockerfile: ./infra/docker/kafka03/Dockerfile
+      cache_from:
+        - confluentinc/cp-server03:cache
+    ports:
+      - "9094:9094"
+    restart: always
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka03:9094
+    depends_on:
+      - zookeeper
+    volumes:
+      - ./infra/docker/kafka03/data:/var/lib/kafka/data
+    networks:
+      - apache-kafka-sample
+
+  producer-app:
+    container_name: producer-app-container
+    hostname: producer-app-server
+    image: node/app:dev
+    build:
+      context: .
+      dockerfile: ./infra/docker/node/Dockerfile
+      cache_from:
+        - node/app:cache
+    tty: true
+    volumes:
+      - ./producer-app:/var/www/app:cached
+    networks:
+      - apache-kafka-sample
+
+  consumer-app:
+    container_name: consumer-app-container
+    hostname: consumer-app-server
+    image: node/app:dev
+    build:
+      context: .
+      dockerfile: ./infra/docker/node/Dockerfile
+      cache_from:
+        - node/app:cache
+    tty: true
+    volumes:
+      - ./consumer-app:/var/www/app:cached
     networks:
       - apache-kafka-sample
 

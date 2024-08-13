@@ -20,4 +20,15 @@ logs: ## Show the logs
 logs-watch: ## Watch the logs
 	docker compose logs --follow
 init: ## Init the container
+	chown -R 1000:1000 ./infra/docker/kafka01/data/
+	chown -R 1000:1000 ./infra/docker/kafka02/data/
+	chown -R 1000:1000 ./infra/docker/kafka03/data/
+	chown -R 1000:1000 ./infra/docker/zookeeper/data/
+	chown -R 1000:1000 ./infra/docker/zookeeper/log/
 	docker compose up -d --build
+	docker compose exec producer-app npm install
+	docker compose exec consumer-app npm install
+run-producer: ## Run Producer App
+	docker compose exec producer-app node src/firstAppProducer.mjs
+run-consumer: ## Run Consumer App
+	docker compose exec consumer-app node src/firstAppConsumer.mjs
