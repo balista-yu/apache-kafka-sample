@@ -8,13 +8,13 @@ process.env.KAFKAJS_NO_PARTITIONER_WARNING = '1';
 // 1. KafkaProducerに必要な設定
 const kafka = new Kafka({
     clientId: 'my-app',
-    brokers: ['kafka01:9092', 'kafka02:9093', 'kafka03:9094'],
+    brokers: ['kafka01:9092', 'kafka02:9092', 'kafka03:9092'],
 });
 
 // 2. KafkaクラスタにMessageを送信（produce）するオブジェクト生成
 const producer = kafka.producer({allowAutoTopicCreation: true,});
 
-const topicName = 'sample2'
+const topicName = 'first-app'
 
 const produce = async () => {
     try {

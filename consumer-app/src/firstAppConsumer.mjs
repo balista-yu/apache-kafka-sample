@@ -2,7 +2,7 @@ import {Kafka} from 'kafkajs';
 
 // 1. KafkaConsumerに必要な設定
 const kafka = new Kafka({
-    clientId: 'my-app', brokers: ['kafka01:9092', 'kafka02:9093', 'kafka03:9094'],
+    clientId: 'my-app', brokers: ['kafka01:9092', 'kafka02:9092', 'kafka03:9092'],
 });
 
 // 2. KafkaクラスタからMessageを受信（Consume）するオブジェクト生成
@@ -10,7 +10,7 @@ const consumer = kafka.consumer({
     groupId: 'FirstAppConsumerGroup',
 })
 
-const topicName = 'sample2'
+const topicName = 'first-app'
 
 const subscribe = async () => {
     try {
