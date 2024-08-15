@@ -11,11 +11,11 @@ services:
       cache_from:
         - confluentinc/cp-zookeeper:cache
     environment:
-      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_SERVER_ID: 1 # Zookeeperクラスタを構成する各サーバに一意に割り当てられる識別子（myid）
       ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-      ZOOKEEPER_INIT_LIMIT: 10
-      ZOOKEEPER_SYNC_LIMIT: 5
+      ZOOKEEPER_TICK_TIME: 2000 # 2000ミリ秒
+      ZOOKEEPER_INIT_LIMIT: 10 # Zookeeperクラスタの初期接続のタイムアウト値（tickTime単位なので、2000×10で20秒）
+      ZOOKEEPER_SYNC_LIMIT: 5 # Zookeeperクラスタの同期のタイムアウト値（tickTime単位なので、2000×5で10秒）
       ZOOKEEPER_SERVERS: zookeeper01:2888:3888;zookeeper02:2888:3888;zookeeper03:2888:3888
     ports:
       - "2181:2181"
@@ -86,13 +86,14 @@ services:
       - "9092:9092"
     restart: always
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper01:2181,zookeeper02:2181,zookeeper03:2181
+      KAFKA_BROKER_ID: 1 # サーバ毎に定めたBroker ID（整数値）※Zookeeperのmyidと同じIDにする必要はない
+      KAFKA_BROKER_ID_GENERATION_ENABLE: false # Kafkaが自動的にIDを付与する機能を無効にして手動でIDを設定する
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper01:2181,zookeeper02:2181,zookeeper03:2181 # BrokerがZookeeperへ接続する際の接続情報
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka01:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
-    depends_on:
+    depends_on: # Zookeeperを先に起動させ、その後Brokerを起動
       - zookeeper01
       - zookeeper02
       - zookeeper03
@@ -115,6 +116,7 @@ services:
     restart: always
     environment:
       KAFKA_BROKER_ID: 2
+      KAFKA_BROKER_ID_GENERATION_ENABLE: false
       KAFKA_ZOOKEEPER_CONNECT: zookeeper01:2181,zookeeper02:2181,zookeeper03:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka02:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
@@ -143,6 +145,7 @@ services:
     restart: always
     environment:
       KAFKA_BROKER_ID: 3
+      KAFKA_BROKER_ID_GENERATION_ENABLE: false
       KAFKA_ZOOKEEPER_CONNECT: zookeeper01:2181,zookeeper02:2181,zookeeper03:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka03:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
