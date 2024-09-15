@@ -1,0 +1,16 @@
+{
+  "name": "sink-sales-data",
+  "config": {
+    "connector.class": "io.confluent.connect.s3.S3SinkConnector",
+    "store.url": "http://localstack:4566/",
+    "s3.bucket.name": "datahub-sales",
+    "s3.region": "ap-northeast-1",
+    "aws.access.key.id": "dummy",
+    "aws.secret.access.key": "dummy",
+    "storage.class": "io.confluent.connect.s3.storage.S3Storage",
+    "format.class": "io.confluent.connect.s3.format.json.JsonFormat",
+    "flush.size": 3,
+    "topics": "possales_pos_uriage,ecsales_ec_uriage",
+    "task.max": 3
+  }
+}

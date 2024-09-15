@@ -1,0 +1,8 @@
+{
+  "name": "load-zaiko-data",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "file": "/zaiko/latest.txt",
+    "topic": "zaiko-data"
+  }
+}

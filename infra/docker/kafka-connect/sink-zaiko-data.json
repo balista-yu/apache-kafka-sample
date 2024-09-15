@@ -1,0 +1,8 @@
+{
+  "name": "sink-zaiko-data",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSinkConnector",
+    "file": "/ec/zaiko-latest.txt",
+    "topics": "zaiko-data"
+  }
+}
