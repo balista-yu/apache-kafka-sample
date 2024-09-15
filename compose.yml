@@ -166,6 +166,41 @@ services:
     networks:
       - apache-kafka-sample
 
+  kafka-connect:
+    container_name: kafka-connect-container
+    hostname: kafka-connect-server
+    image: confluentinc/kafka-connect:dev
+    build:
+      context: .
+      dockerfile: ./infra/docker/kafka-connect/Dockerfile
+      cache_from:
+        - confluentinc/kafka-connect:cache
+    ports:
+      - "8083:8083"
+    restart: always
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: kafka01:9092,kafka02:9092,kafka03:9092
+      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
+      CONNECT_GROUP_ID: connect-group
+      CONNECT_CONFIG_STORAGE_TOPIC: connect-configs
+      CONNECT_OFFSET_STORAGE_TOPIC: connect-offsets
+      CONNECT_STATUS_STORAGE_TOPIC: connect-status
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components,/usr/share/filestream-connectors
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+    volumes:
+      - apache-kafka-sample-connect-data-store:/var/lib/kafka/data
+      - apache-kafka-sample-connect-jars-store:/etc/kafka-connect/jars
+      - apache-kafka-sample-kafka-connect-secrets-store:/etc/kafka-connect/secrets
+      - apache-kafka-sample-connect-secrets-store:/etc/kafka/secrets
+    depends_on:
+      - kafka01
+      - kafka02
+      - kafka03
+    networks:
+      - apache-kafka-sample
+
   producer-app:
     container_name: producer-app-container
     hostname: producer-app-server
@@ -224,20 +259,20 @@ services:
     image: pos-data-server/db:dev
     build:
       context: .
-      dockerfile: ./infra/docker/mariadb/Dockerfile
+      dockerfile: ./infra/docker/mysql/Dockerfile
       cache_from:
         - pos-data-server/db:cache
     restart: always
     ports:
       - "33306:3306"
     volumes:
-      - apache-kafka-sample-mariadb-store:/var/lib/mysql
-      - ./infra/docker/mariadb/init:/docker-entrypoint-initdb.d/
+      - apache-kafka-sample-mysql-store:/var/lib/mysql
+      - ./infra/docker/mysql/init:/docker-entrypoint-initdb.d/
     environment:
-      - MARIADB_ROOT_PASSWORD=${DB_PASS:-secret}
-      - MARIADB_DATABASE=${DB_NAME:-pos}
-      - MARIADB_USER=${DB_USER:-connectuser}
-      - MARIADB_PASSWORD=${DB_PASS:-connectpass}
+      - MYSQL_ROOT_PASSWORD=${DB_PASS:-secret}
+      - MYSQL_DATABASE=${DB_NAME:-pos}
+      - MYSQL_USER=${DB_USER:-connectuser}
+      - MYSQL_PASSWORD=${DB_PASS:-connectpass}
     networks:
       - apache-kafka-sample
 
@@ -315,11 +350,23 @@ volumes:
   apache-kafka-sample-zookeeper03-log-store:
     name: apache-kafka-sample-zookeeper03-log-store
     driver: local
+  apache-kafka-sample-connect-data-store:
+    name: apache-kafka-sample-connect-data-store
+    driver: local
+  apache-kafka-sample-connect-jars-store:
+    name: apache-kafka-sample-connect-jars-store
+    driver: local
+  apache-kafka-sample-kafka-connect-secrets-store:
+    name: apache-kafka-sample-kafka-connect-secrets-store
+    driver: local
+  apache-kafka-sample-connect-secrets-store:
+    name: apache-kafka-sample-connect-secrets-store
+    driver: local
   apache-kafka-sample-postgresql-store:
     name: apache-kafka-sample-postgresql-store
     driver: local
-  apache-kafka-sample-mariadb-store:
-    name: apache-kafka-sample-mariadb-store
+  apache-kafka-sample-mysql-store:
+    name: apache-kafka-sample-mysql-store
     driver: local
   apache-kafka-sample-localstack-store:
     name: apache-kafka-sample-localstack-store
