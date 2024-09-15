@@ -14,8 +14,7 @@ CREATE TABLE IF NOT EXISTS pos_uriage (
     unit_price int
     );
 
-CREATE USER IF NOT EXISTS 'connectuser'@'%' IDENTIFIED BY 'connectpass';
-GRANT ALL PRIVILEGES ON pos.* TO 'connectuser'@'%';
+GRANT ALL ON pos.* TO 'connectuser'@'%';
 
 INSERT INTO pos_uriage (seq, sales_time, sales_id, shop_id, item_id, amount, unit_price)
 VALUES (1, '2018-10-11 21:21:21', 'POSSALES00001', 'SHOP001', 'ITEM001', 2, 300),
