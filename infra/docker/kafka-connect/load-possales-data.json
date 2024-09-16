@@ -1,0 +1,14 @@
+{
+  "name": "load-possales-data",
+  "config": {
+    "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
+    "connection.url": "jdbc:mysql://pos-data-server:3306/pos",
+    "connection.user": "connectuser",
+    "connection.password": "connectpass",
+    "mode": "incrementing",
+    "incrementing.column.name": "seq",
+    "table.whitelist": "pos_uriage",
+    "topic.prefix": "possales_",
+    "task.max": "3"
+  }
+}

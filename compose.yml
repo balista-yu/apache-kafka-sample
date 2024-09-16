@@ -20,8 +20,9 @@ services:
     ports:
       - "2181:2181"
     volumes:
-      - ./infra/docker/zookeeper/01/data:/var/lib/zookeeper/data
-      - ./infra/docker/zookeeper/01/log:/var/lib/zookeeper/log
+      - apache-kafka-sample-zookeeper01-data-store:/var/lib/zookeeper/data
+      - apache-kafka-sample-zookeeper01-log-store:/var/lib/zookeeper/log
+      - apache-kafka-sample-zookeeper01-secrets-store:/etc/zookeeper/secrets
     networks:
       - apache-kafka-sample
 
@@ -44,8 +45,9 @@ services:
     ports:
       - "2182:2181"
     volumes:
-      - ./infra/docker/zookeeper/02/data:/var/lib/zookeeper/data
-      - ./infra/docker/zookeeper/02/log:/var/lib/zookeeper/log
+      - apache-kafka-sample-zookeeper02-data-store:/var/lib/zookeeper/data
+      - apache-kafka-sample-zookeeper02-log-store:/var/lib/zookeeper/log
+      - apache-kafka-sample-zookeeper02-secrets-store:/etc/zookeeper/secrets
     networks:
       - apache-kafka-sample
 
@@ -68,8 +70,9 @@ services:
     ports:
       - "2183:2181"
     volumes:
-      - ./infra/docker/zookeeper/03/data:/var/lib/zookeeper/data
-      - ./infra/docker/zookeeper/03/log:/var/lib/zookeeper/log
+      - apache-kafka-sample-zookeeper03-data-store:/var/lib/zookeeper/data
+      - apache-kafka-sample-zookeeper03-log-store:/var/lib/zookeeper/log
+      - apache-kafka-sample-zookeeper03-secrets-store:/etc/zookeeper/secrets
     networks:
       - apache-kafka-sample
 
@@ -98,7 +101,8 @@ services:
       - zookeeper02
       - zookeeper03
     volumes:
-      - ./infra/docker/kafka/01/data:/var/lib/kafka/data
+      - apache-kafka-sample-kafka01-data-store:/var/lib/kafka/data
+      - apache-kafka-sample-kafka01-secrets-store:/etc/kafka/secrets
     networks:
       - apache-kafka-sample
 
@@ -127,7 +131,8 @@ services:
       - zookeeper02
       - zookeeper03
     volumes:
-      - ./infra/docker/kafka/02/data:/var/lib/kafka/data
+      - apache-kafka-sample-kafka02-data-store:/var/lib/kafka/data
+      - apache-kafka-sample-kafka02-secrets-store:/etc/kafka/secrets
     networks:
       - apache-kafka-sample
 
@@ -156,7 +161,43 @@ services:
       - zookeeper02
       - zookeeper03
     volumes:
-      - ./infra/docker/kafka/03/data:/var/lib/kafka/data
+      - apache-kafka-sample-kafka03-data-store:/var/lib/kafka/data
+      - apache-kafka-sample-kafka03-secrets-store:/etc/kafka/secrets
+    networks:
+      - apache-kafka-sample
+
+  kafka-connect:
+    container_name: kafka-connect-container
+    hostname: kafka-connect-server
+    image: confluentinc/kafka-connect:dev
+    build:
+      context: .
+      dockerfile: ./infra/docker/kafka-connect/Dockerfile
+      cache_from:
+        - confluentinc/kafka-connect:cache
+    ports:
+      - "8083:8083"
+    restart: always
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: kafka01:9092,kafka02:9092,kafka03:9092
+      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
+      CONNECT_GROUP_ID: connect-group
+      CONNECT_CONFIG_STORAGE_TOPIC: connect-configs
+      CONNECT_OFFSET_STORAGE_TOPIC: connect-offsets
+      CONNECT_STATUS_STORAGE_TOPIC: connect-status
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components,/usr/share/filestream-connectors
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+    volumes:
+      - apache-kafka-sample-connect-data-store:/var/lib/kafka/data
+      - apache-kafka-sample-connect-jars-store:/etc/kafka-connect/jars
+      - apache-kafka-sample-kafka-connect-secrets-store:/etc/kafka-connect/secrets
+      - apache-kafka-sample-connect-secrets-store:/etc/kafka/secrets
+    depends_on:
+      - kafka01
+      - kafka02
+      - kafka03
     networks:
       - apache-kafka-sample
 
@@ -190,6 +231,143 @@ services:
     networks:
       - apache-kafka-sample
 
+  ec-data-server:
+    container_name: ec-data-server-container
+    hostname: ec-data-server
+    image: ec-data-server/db:dev
+    build:
+      context: .
+      dockerfile: ./infra/docker/postgresql/Dockerfile
+      cache_from:
+        - ec-data-server/db:cache
+    restart: always
+    ports:
+      - "35432:5432"
+    volumes:
+      - apache-kafka-sample-postgresql-store:/var/lib/postgresql/data/
+      - ./infra/docker/postgresql/init:/docker-entrypoint-initdb.d/
+      - ./infra/docker/postgresql/conf/postgresql.conf:/etc/postgresql/postgresql.conf
+    environment:
+      - POSTGRES_USER=${DB_USER:-connectuser}
+      - POSTGRES_PASSWORD=${DB_PASS:-connectpass}
+    networks:
+      - apache-kafka-sample
+
+  pos-data-server:
+    container_name: pos-data-server-container
+    hostname: pos-data-server
+    image: pos-data-server/db:dev
+    build:
+      context: .
+      dockerfile: ./infra/docker/mysql/Dockerfile
+      cache_from:
+        - pos-data-server/db:cache
+    restart: always
+    ports:
+      - "33306:3306"
+    volumes:
+      - apache-kafka-sample-mysql-store:/var/lib/mysql
+      - ./infra/docker/mysql/init:/docker-entrypoint-initdb.d/
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASS:-secret}
+      - MYSQL_DATABASE=${DB_NAME:-pos}
+      - MYSQL_USER=${DB_USER:-connectuser}
+      - MYSQL_PASSWORD=${DB_PASS:-connectpass}
+    networks:
+      - apache-kafka-sample
+
+  localstack:
+    container_name: sales-forecast-container
+    hostname: sales-forecast-localstack
+    image: sales-forecast/localstack:dev
+    build:
+      context: .
+      dockerfile: ./infra/docker/localstack/Dockerfile
+      cache_from:
+        - sales-forecast/localstack:cache
+    environment:
+      - DEBUG=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+      - AWS_DEFAULT_REGION=ap-northeast-1
+    ports:
+      - '127.0.0.1:34566:4566'
+    volumes:
+      - apache-kafka-sample-localstack-store:/var/lib/localstack
+      - ./infra/docker/localstack/init/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - apache-kafka-sample
+
 networks:
   apache-kafka-sample:
     driver: bridge
+
+volumes:
+  apache-kafka-sample-zookeeper01-data-store:
+    name: apache-kafka-sample-zookeeper01-data-store
+    driver: local
+  apache-kafka-sample-zookeeper01-log-store:
+    name: apache-kafka-sample-zookeeper01-log-store
+    driver: local
+  apache-kafka-sample-zookeeper01-secrets-store:
+    name: apache-kafka-sample-zookeeper01-secrets-store
+    driver: local
+  apache-kafka-sample-zookeeper02-data-store:
+    name: apache-kafka-sample-zookeeper02-data-store
+    driver: local
+  apache-kafka-sample-zookeeper02-log-store:
+    name: apache-kafka-sample-zookeeper02-log-store
+    driver: local
+  apache-kafka-sample-zookeeper02-secrets-store:
+    name: apache-kafka-sample-zookeeper02-secrets-store
+    driver: local
+  apache-kafka-sample-zookeeper03-data-store:
+    name: apache-kafka-sample-zookeeper03-data-store
+    driver: local
+  apache-kafka-sample-zookeeper03-secrets-store:
+    name: apache-kafka-sample-zookeeper03-secrets-store
+    driver: local
+  apache-kafka-sample-kafka01-data-store:
+    name: apache-kafka-sample-kafka01-data-store
+    driver: local
+  apache-kafka-sample-kafka01-secrets-store:
+    name: apache-kafka-sample-kafka01-secrets-store
+    driver: local
+  apache-kafka-sample-kafka02-data-store:
+    name: apache-kafka-sample-kafka02-data-store
+    driver: local
+  apache-kafka-sample-kafka02-secrets-store:
+    name: apache-kafka-sample-kafka02-secrets-store
+    driver: local
+  apache-kafka-sample-kafka03-data-store:
+    name: apache-kafka-sample-kafka03-data-store
+    driver: local
+  apache-kafka-sample-kafka03-secrets-store:
+    name: apache-kafka-sample-kafka03-secrets-store
+    driver: local
+  apache-kafka-sample-zookeeper03-log-store:
+    name: apache-kafka-sample-zookeeper03-log-store
+    driver: local
+  apache-kafka-sample-connect-data-store:
+    name: apache-kafka-sample-connect-data-store
+    driver: local
+  apache-kafka-sample-connect-jars-store:
+    name: apache-kafka-sample-connect-jars-store
+    driver: local
+  apache-kafka-sample-kafka-connect-secrets-store:
+    name: apache-kafka-sample-kafka-connect-secrets-store
+    driver: local
+  apache-kafka-sample-connect-secrets-store:
+    name: apache-kafka-sample-connect-secrets-store
+    driver: local
+  apache-kafka-sample-postgresql-store:
+    name: apache-kafka-sample-postgresql-store
+    driver: local
+  apache-kafka-sample-mysql-store:
+    name: apache-kafka-sample-mysql-store
+    driver: local
+  apache-kafka-sample-localstack-store:
+    name: apache-kafka-sample-localstack-store
+    driver: local
